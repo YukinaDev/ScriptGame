@@ -1,0 +1,12 @@
+# Ignore everything by first ignoring all files
+*
+
+# Then whitelist only C# scripts in Scripts folder
+!Assets/
+Assets/*
+!Assets/Scripts/
+Assets/Scripts/*
+!Assets/Scripts/**/*.cs
+
+# Also keep this gitignore file
+!.gitignore
