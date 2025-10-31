@@ -48,7 +48,8 @@ public class FirstPersonController : MonoBehaviour
 
     void HandleMovement()
     {
-        isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
+        // Raycast thay vì CheckSphere để tránh detect chính Player
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, controller.height / 2f + 0.2f, groundMask);
 
         if (isGrounded && velocity.y < 0)
         {
