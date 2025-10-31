@@ -73,7 +73,8 @@ public class FirstPersonController : MonoBehaviour
         bool isMoving = move.magnitude > 0.1f;
         bool canSprint = staminaSystem != null && staminaSystem.CanSprint();
         
-        bool isSprinting = wantsToSprint && isMoving && canSprint;
+        // Chỉ sprint khi đang trên mặt đất
+        bool isSprinting = wantsToSprint && isMoving && canSprint && isGrounded;
         
         if (isSprinting && staminaSystem != null)
         {
