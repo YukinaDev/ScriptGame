@@ -18,6 +18,7 @@ public class FootstepSound : MonoBehaviour
     
     [Header("References")]
     [SerializeField] private CharacterController controller;
+    [SerializeField] private FirstPersonController firstPersonController;
     
     private float stepTimer = 0f;
     private bool isMoving = false;
@@ -36,13 +37,21 @@ public class FootstepSound : MonoBehaviour
         {
             controller = GetComponent<CharacterController>();
         }
+
+        if (firstPersonController == null)
+        {
+            firstPersonController = GetComponent<FirstPersonController>();
+        }
     }
 
     void Update()
     {
         CheckMovement();
         
-        if (isMoving)
+        // Không phát âm thanh khi đang sneak (Alt)
+        bool isSneaking = firstPersonController != null && firstPersonController.IsSneaking;
+        
+        if (isMoving && !isSneaking)
         {
             stepTimer += Time.deltaTime;
             
@@ -57,19 +66,36 @@ public class FootstepSound : MonoBehaviour
         else
         {
             stepTimer = 0f;
+            
+            // Ngừng phát âm thanh ngay khi buông phím
+            if (audioSource != null && audioSource.isPlaying)
+            {
+                audioSource.Stop();
+            }
         }
     }
 
     void CheckMovement()
     {
-        // Kiểm tra player có đang di chuyển không
-        if (controller != null)
+        // Kiểm tra WASD có đang được nhấn không
+        if (Keyboard.current != null)
         {
-            isMoving = controller.velocity.magnitude > 0.1f;
+            bool pressingMovementKey = 
+                Keyboard.current.wKey.isPressed ||
+                Keyboard.current.aKey.isPressed ||
+                Keyboard.current.sKey.isPressed ||
+                Keyboard.current.dKey.isPressed;
+            
+            isMoving = pressingMovementKey;
+            
+            // Kiểm tra có đang sprint không (Shift + đang di chuyển)
+            isSprinting = Keyboard.current.leftShiftKey.isPressed && isMoving;
         }
-        
-        // Kiểm tra có đang sprint không
-        isSprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed && isMoving;
+        else
+        {
+            isMoving = false;
+            isSprinting = false;
+        }
     }
 
     void PlayFootstep()

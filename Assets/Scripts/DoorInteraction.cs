@@ -13,7 +13,7 @@ public class DoorInteraction : MonoBehaviour, IInteractable
     
     [Header("UI")]
     public string lockedMessage = "This door is locked";
-    public string unlockedMessage = "Press [E] to enter";
+    public string unlockedMessage = "Press E to Enter";
     
     [Header("Loading")]
     public GameObject loadingPanel;

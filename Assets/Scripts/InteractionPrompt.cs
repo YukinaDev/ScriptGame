@@ -28,7 +28,8 @@ public class InteractionPrompt : MonoBehaviour
     {
         if (promptText != null)
         {
-            promptText.text = $"[E] {message}";
+            // Không thêm [E] nữa, message đã có sẵn format
+            promptText.text = message;
         }
         
         if (promptPanel != null)

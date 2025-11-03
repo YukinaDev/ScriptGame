@@ -23,7 +23,6 @@ public class WarehouseMapGenerator : MonoBehaviour
     }
 
     [Header("Generation Control")]
-    public bool regenerateOnNewGame = true;
     private bool mapGenerated = false;
     [Header("Map Settings")]
     public int mapWidth = 50;
@@ -40,12 +39,19 @@ public class WarehouseMapGenerator : MonoBehaviour
     public Color shelfColor = new Color(0.55f, 0.45f, 0.35f);
 
     [Header("Generation Settings")]
-    [Range(0f, 1f)] public float obstacleChance = 0.15f;
+    public int totalObstaclesPerRoom = 5;
     [Range(0f, 1f)] public float crateChance = 0.35f;
     [Range(0f, 1f)] public float boxChance = 0.30f;
     [Range(0f, 1f)] public float cabinetChance = 0.15f;
     [Range(0f, 1f)] public float tableChance = 0.10f;
     [Range(0f, 1f)] public float shelfChance = 0.10f;
+
+    [Header("Custom Objects")]
+    public GameObject doorPrefab;
+    public GameObject[] customObjectPrefabs;
+    public int doorsPerRoom = 1;
+    public int customObjectsPerRoom = 2;
+    public float customObjectScale = 1f;
 
     [Header("Room Settings")]
     public int minRoomSize = 5;
@@ -57,9 +63,7 @@ public class WarehouseMapGenerator : MonoBehaviour
     public Color lightColor = Color.white;
     public float lightIntensity = 2f;
 
-    [Header("Player Settings")]
-    public bool centerMapOnPlayer = true;
-    public bool movePlayerToSpawn = true;
+
     
     [Header("Item Spawning Integration")]
     public bool createItemSpawnPoints = true;
@@ -72,6 +76,7 @@ public class WarehouseMapGenerator : MonoBehaviour
     private Vector3 playerPosition;
     private GameObject player;
     private List<Vector3> validSpawnPositions = new List<Vector3>();
+    private GameObject firstDoorSpawned = null;
 
     private enum TileType
     {
@@ -123,17 +128,14 @@ public class WarehouseMapGenerator : MonoBehaviour
 
     void Start()
     {
-        if (!mapGenerated || regenerateOnNewGame)
-        {
-            GenerateMap();
-            mapGenerated = true;
-        }
-        else
-        {
-            FindPlayerPosition();
-            RepositionMapForPlayer();
-            CreateSpawnMarker();
-        }
+        // Map sẽ không tự động generate khi Start
+        // User phải gọi GenerateMap() hoặc GenerateNewMap() thủ công
+    }
+
+    [ContextMenu("Generate New Map")]
+    public void GenerateNewMap()
+    {
+        GenerateMap();
     }
 
     public void GenerateMap()
@@ -157,32 +159,13 @@ public class WarehouseMapGenerator : MonoBehaviour
         CreateRoomLights();
         if (createItemSpawnPoints)
             GenerateItemSpawnPoints();
-        CreateSpawnMarker();
-    }
-
-    void RepositionMapForPlayer()
-    {
-        if (mapParent == null) return;
-
-        FindPlayerPosition();
-
-        Vector3 spawnPointLocal = Vector3.zero;
-        if (rooms.Count > 0)
-        {
-            Vector2Int center = rooms[0].Center();
-            spawnPointLocal = new Vector3(center.x * tileSize, 0, center.y * tileSize);
-        }
-
-        Vector3 offset = playerPosition - spawnPointLocal;
-        mapParent.position = offset;
-    }
-
-    public void RegenerateNewMap()
-    {
-        mapGenerated = false;
-        GenerateMap();
+        PlaceCustomObjects();
+        MovePlayerToMap();
+        
         mapGenerated = true;
     }
+
+
 
     void GenerateItemSpawnPoints()
     {
@@ -394,15 +377,30 @@ public class WarehouseMapGenerator : MonoBehaviour
     {
         foreach (Room room in rooms)
         {
+            List<Vector2Int> availablePositions = new List<Vector2Int>();
+            
+            // Thu thập tất cả vị trí có thể đặt obstacles
             for (int x = room.x + 1; x < room.x + room.width - 1; x++)
             {
                 for (int y = room.y + 1; y < room.y + room.height - 1; y++)
                 {
-                    if (mapGrid[x, y] == (int)TileType.Floor && Random.value < obstacleChance)
+                    if (mapGrid[x, y] == (int)TileType.Floor)
                     {
-                        mapGrid[x, y] = (int)TileType.Obstacle;
+                        availablePositions.Add(new Vector2Int(x, y));
                     }
                 }
+            }
+
+            // Đặt số lượng obstacles cố định
+            int obstaclesToPlace = Mathf.Min(totalObstaclesPerRoom, availablePositions.Count);
+            for (int i = 0; i < obstaclesToPlace; i++)
+            {
+                if (availablePositions.Count == 0) break;
+                
+                int randomIndex = Random.Range(0, availablePositions.Count);
+                Vector2Int pos = availablePositions[randomIndex];
+                mapGrid[pos.x, pos.y] = (int)TileType.Obstacle;
+                availablePositions.RemoveAt(randomIndex);
             }
         }
     }
@@ -457,7 +455,9 @@ public class WarehouseMapGenerator : MonoBehaviour
         floor.transform.position = position + Vector3.down * 0.5f;
         floor.transform.localScale = new Vector3(tileSize, 0.1f, tileSize);
         floor.transform.SetParent(parent);
-        floor.GetComponent<Renderer>().material.color = floorColor;
+        Material floorMat = new Material(Shader.Find("Standard"));
+        floorMat.color = floorColor;
+        floor.GetComponent<Renderer>().material = floorMat;
         floor.layer = LayerMask.NameToLayer("Ground");
     }
 
@@ -468,7 +468,9 @@ public class WarehouseMapGenerator : MonoBehaviour
         wall.transform.position = position + Vector3.up * (roomHeight / 2f - 0.5f);
         wall.transform.localScale = new Vector3(tileSize, roomHeight, tileSize);
         wall.transform.SetParent(parent);
-        wall.GetComponent<Renderer>().material.color = wallColor;
+        Material wallMat = new Material(Shader.Find("Standard"));
+        wallMat.color = wallColor;
+        wall.GetComponent<Renderer>().material = wallMat;
         wall.layer = LayerMask.NameToLayer("Default");
     }
 
@@ -507,7 +509,9 @@ public class WarehouseMapGenerator : MonoBehaviour
         crate.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
         crate.transform.rotation = Quaternion.Euler(0, Random.Range(0, 360), 0);
         crate.transform.SetParent(parent);
-        crate.GetComponent<Renderer>().material.color = crateColor;
+        Material crateMat = new Material(Shader.Find("Standard"));
+        crateMat.color = crateColor;
+        crate.GetComponent<Renderer>().material = crateMat;
     }
 
     void CreateBox(Vector3 position, Transform parent)
@@ -518,7 +522,9 @@ public class WarehouseMapGenerator : MonoBehaviour
         box.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
         box.transform.rotation = Quaternion.Euler(0, Random.Range(0, 360), Random.Range(-5, 5));
         box.transform.SetParent(parent);
-        box.GetComponent<Renderer>().material.color = boxColor;
+        Material boxMat = new Material(Shader.Find("Standard"));
+        boxMat.color = boxColor;
+        box.GetComponent<Renderer>().material = boxMat;
     }
 
     void CreateCabinet(Vector3 position, Transform parent)
@@ -533,14 +539,18 @@ public class WarehouseMapGenerator : MonoBehaviour
         body.transform.SetParent(cabinet.transform);
         body.transform.localPosition = Vector3.up * 0.8f;
         body.transform.localScale = new Vector3(0.8f, 1.6f, 0.4f);
-        body.GetComponent<Renderer>().material.color = cabinetColor;
+        Material bodyMat = new Material(Shader.Find("Standard"));
+        bodyMat.color = cabinetColor;
+        body.GetComponent<Renderer>().material = bodyMat;
 
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.name = "Door";
         door.transform.SetParent(cabinet.transform);
         door.transform.localPosition = new Vector3(0, 0.8f, -0.22f);
         door.transform.localScale = new Vector3(0.75f, 1.5f, 0.05f);
-        door.GetComponent<Renderer>().material.color = cabinetColor * 0.8f;
+        Material doorMat = new Material(Shader.Find("Standard"));
+        doorMat.color = cabinetColor * 0.8f;
+        door.GetComponent<Renderer>().material = doorMat;
     }
 
     void CreateTable(Vector3 position, Transform parent)
@@ -555,7 +565,9 @@ public class WarehouseMapGenerator : MonoBehaviour
         top.transform.SetParent(table.transform);
         top.transform.localPosition = Vector3.up * 0.7f;
         top.transform.localScale = new Vector3(0.9f, 0.1f, 0.6f);
-        top.GetComponent<Renderer>().material.color = tableColor;
+        Material topMat = new Material(Shader.Find("Standard"));
+        topMat.color = tableColor;
+        top.GetComponent<Renderer>().material = topMat;
 
         for (int i = 0; i < 4; i++)
         {
@@ -566,7 +578,9 @@ public class WarehouseMapGenerator : MonoBehaviour
             float z = (i < 2) ? -0.2f : 0.2f;
             leg.transform.localPosition = new Vector3(x, 0.35f, z);
             leg.transform.localScale = new Vector3(0.08f, 0.7f, 0.08f);
-            leg.GetComponent<Renderer>().material.color = tableColor * 0.7f;
+            Material legMat = new Material(Shader.Find("Standard"));
+            legMat.color = tableColor * 0.7f;
+            leg.GetComponent<Renderer>().material = legMat;
         }
     }
 
@@ -584,7 +598,9 @@ public class WarehouseMapGenerator : MonoBehaviour
             level.transform.SetParent(shelf.transform);
             level.transform.localPosition = Vector3.up * (0.5f + i * 0.6f);
             level.transform.localScale = new Vector3(0.9f, 0.05f, 0.4f);
-            level.GetComponent<Renderer>().material.color = shelfColor;
+            Material levelMat = new Material(Shader.Find("Standard"));
+            levelMat.color = shelfColor;
+            level.GetComponent<Renderer>().material = levelMat;
         }
 
         GameObject leftPost = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -592,21 +608,25 @@ public class WarehouseMapGenerator : MonoBehaviour
         leftPost.transform.SetParent(shelf.transform);
         leftPost.transform.localPosition = new Vector3(-0.4f, 1.0f, 0);
         leftPost.transform.localScale = new Vector3(0.08f, 2.0f, 0.4f);
-        leftPost.GetComponent<Renderer>().material.color = shelfColor * 0.8f;
+        Material leftPostMat = new Material(Shader.Find("Standard"));
+        leftPostMat.color = shelfColor * 0.8f;
+        leftPost.GetComponent<Renderer>().material = leftPostMat;
 
         GameObject rightPost = GameObject.CreatePrimitive(PrimitiveType.Cube);
         rightPost.name = "RightPost";
         rightPost.transform.SetParent(shelf.transform);
         rightPost.transform.localPosition = new Vector3(0.4f, 1.0f, 0);
         rightPost.transform.localScale = new Vector3(0.08f, 2.0f, 0.4f);
-        rightPost.GetComponent<Renderer>().material.color = shelfColor * 0.8f;
+        Material rightPostMat = new Material(Shader.Find("Standard"));
+        rightPostMat.color = shelfColor * 0.8f;
+        rightPost.GetComponent<Renderer>().material = rightPostMat;
     }
 
     void FindPlayerPosition()
     {
         player = GameObject.FindGameObjectWithTag("Player");
         
-        if (player != null && centerMapOnPlayer)
+        if (player != null)
         {
             playerPosition = player.transform.position;
             Debug.Log("Found player at: " + playerPosition);
@@ -614,8 +634,7 @@ public class WarehouseMapGenerator : MonoBehaviour
         else
         {
             playerPosition = Vector3.zero;
-            if (player == null)
-                Debug.Log("No player found with 'Player' tag, generating map at origin");
+            Debug.Log("No player found with 'Player' tag, generating map at origin");
         }
     }
 
@@ -648,7 +667,9 @@ public class WarehouseMapGenerator : MonoBehaviour
                     ceiling.transform.position = position;
                     ceiling.transform.localScale = new Vector3(tileSize, 0.1f, tileSize);
                     ceiling.transform.SetParent(ceilingParent);
-                    ceiling.GetComponent<Renderer>().material.color = wallColor * 0.8f;
+                    Material ceilingMat = new Material(Shader.Find("Standard"));
+                    ceilingMat.color = wallColor * 0.8f;
+                    ceiling.GetComponent<Renderer>().material = ceilingMat;
                 }
             }
         }
@@ -692,46 +713,132 @@ public class WarehouseMapGenerator : MonoBehaviour
         }
     }
 
-    void CreateSpawnMarker()
+    void PlaceCustomObjects()
     {
         if (rooms.Count == 0) return;
 
-        Vector3 spawnPosition = playerPosition;
-        spawnPosition.y = 0.05f;
-
-        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        marker.name = "SpawnPoint";
-        marker.transform.position = spawnPosition;
-        marker.transform.localScale = new Vector3(0.5f, 0.1f, 0.5f);
-        marker.GetComponent<Renderer>().material.color = Color.red;
-        
-        DestroyImmediate(marker.GetComponent<Collider>());
-
-        GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        pole.name = "Pole";
-        pole.transform.position = spawnPosition + Vector3.up * 1f;
-        pole.transform.localScale = new Vector3(0.05f, 1f, 0.05f);
-        pole.GetComponent<Renderer>().material.color = Color.yellow;
-        pole.transform.SetParent(marker.transform);
-        
-        DestroyImmediate(pole.GetComponent<Collider>());
-
-        marker.transform.SetParent(mapParent);
-
-        if (player != null && movePlayerToSpawn)
+        firstDoorSpawned = null;
+        Vector3 spawnPointLocal = Vector3.zero;
+        if (rooms.Count > 0)
         {
-            CharacterController cc = player.GetComponent<CharacterController>();
-            if (cc != null)
+            Vector2Int center = rooms[0].Center();
+            spawnPointLocal = new Vector3(center.x * tileSize, 0, center.y * tileSize);
+        }
+
+        Vector3 offset = playerPosition - spawnPointLocal;
+        Transform customObjectsParent = new GameObject("CustomObjects").transform;
+        customObjectsParent.SetParent(mapParent);
+
+        foreach (Room room in rooms)
+        {
+            // Spawn doors
+            if (doorPrefab != null && doorsPerRoom > 0)
             {
-                cc.enabled = false;
-                player.transform.position = new Vector3(playerPosition.x, playerPosition.y + 0.5f, playerPosition.z);
-                cc.enabled = true;
+                SpawnObjectsInRoom(room, doorPrefab, doorsPerRoom, offset, customObjectsParent, "Door", true);
             }
-            else
+
+            // Spawn custom objects
+            if (customObjectPrefabs != null && customObjectPrefabs.Length > 0 && customObjectsPerRoom > 0)
             {
-                player.transform.position = new Vector3(playerPosition.x, playerPosition.y + 0.5f, playerPosition.z);
+                foreach (GameObject prefab in customObjectPrefabs)
+                {
+                    if (prefab != null)
+                    {
+                        SpawnObjectsInRoom(room, prefab, customObjectsPerRoom, offset, customObjectsParent, prefab.name, false);
+                    }
+                }
             }
-            Debug.Log("Player moved to spawn point: " + player.transform.position);
         }
     }
+
+    void SpawnObjectsInRoom(Room room, GameObject prefab, int count, Vector3 offset, Transform parent, string baseName, bool isDoor = false)
+    {
+        List<Vector2Int> availablePositions = new List<Vector2Int>();
+
+        // Tìm vị trí khả dụng (floor không có obstacle)
+        for (int x = room.x + 1; x < room.x + room.width - 1; x++)
+        {
+            for (int y = room.y + 1; y < room.y + room.height - 1; y++)
+            {
+                if (mapGrid[x, y] == (int)TileType.Floor)
+                {
+                    availablePositions.Add(new Vector2Int(x, y));
+                }
+            }
+        }
+
+        int objectsToPlace = Mathf.Min(count, availablePositions.Count);
+        for (int i = 0; i < objectsToPlace; i++)
+        {
+            if (availablePositions.Count == 0) break;
+
+            int randomIndex = Random.Range(0, availablePositions.Count);
+            Vector2Int pos = availablePositions[randomIndex];
+            
+            Vector3 worldPos = new Vector3(pos.x * tileSize, 0, pos.y * tileSize) + offset;
+            GameObject obj = Instantiate(prefab, worldPos, Quaternion.Euler(0, Random.Range(0, 4) * 90, 0), parent);
+            obj.name = $"{baseName}_R{rooms.IndexOf(room)}_{i}";
+            
+            // Scale custom objects
+            obj.transform.localScale = prefab.transform.localScale * customObjectScale;
+            
+            // Lưu door đầu tiên để spawn player
+            if (isDoor && firstDoorSpawned == null)
+            {
+                firstDoorSpawned = obj;
+            }
+            
+            availablePositions.RemoveAt(randomIndex);
+        }
+    }
+
+    void MovePlayerToMap()
+    {
+        if (player == null) return;
+
+        Vector3 targetPosition;
+
+        // Nếu có door thì spawn trước door, nếu không thì spawn ở center room
+        if (firstDoorSpawned != null)
+        {
+            // Spawn player trước door (2 units về phía forward của door)
+            Vector3 doorPosition = firstDoorSpawned.transform.position;
+            Vector3 doorForward = firstDoorSpawned.transform.forward;
+            targetPosition = doorPosition + doorForward * 2f;
+            targetPosition.y = 0.5f;
+            
+            Debug.Log($"Player spawned in front of door at: {targetPosition}");
+        }
+        else if (rooms.Count > 0)
+        {
+            // Fallback: spawn ở center room đầu tiên
+            Vector2Int center = rooms[0].Center();
+            Vector3 spawnPointLocal = new Vector3(center.x * tileSize, 0, center.y * tileSize);
+            Vector3 offset = playerPosition - spawnPointLocal;
+            targetPosition = spawnPointLocal + offset;
+            targetPosition.y = 0.5f;
+            
+            Debug.Log($"Player spawned at room center: {targetPosition}");
+        }
+        else
+        {
+            Debug.LogWarning("No rooms or doors found, player not moved");
+            return;
+        }
+
+        // Di chuyển player
+        CharacterController cc = player.GetComponent<CharacterController>();
+        if (cc != null)
+        {
+            cc.enabled = false;
+            player.transform.position = targetPosition;
+            cc.enabled = true;
+        }
+        else
+        {
+            player.transform.position = targetPosition;
+        }
+    }
+
+
 }

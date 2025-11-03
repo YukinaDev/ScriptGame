@@ -7,6 +7,7 @@ public class FirstPersonController : MonoBehaviour
     [Header("Movement")]
     public float walkSpeed = 5f;
     public float runSpeed = 8f;
+    public float sneakSpeed = 2.5f;
     public float jumpForce = 5f;
     public float gravity = -9.81f;
 
@@ -25,6 +26,9 @@ public class FirstPersonController : MonoBehaviour
     private Vector3 velocity;
     private bool isGrounded;
     private float cameraPitch = 0f;
+    private bool isSneaking = false;
+
+    public bool IsSneaking => isSneaking;
 
     void Start()
     {
@@ -70,12 +74,15 @@ public class FirstPersonController : MonoBehaviour
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
         if (move.magnitude > 1f) move.Normalize();
 
+        // Kiểm tra sneak mode (Ctrl key)
+        isSneaking = Keyboard.current != null && Keyboard.current.leftCtrlKey.isPressed;
+
         bool wantsToSprint = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
         bool isMoving = move.magnitude > 0.1f;
         bool canSprint = staminaSystem != null && staminaSystem.CanSprint();
         
-        // Chỉ sprint khi đang trên mặt đất
-        bool isSprinting = wantsToSprint && isMoving && canSprint && isGrounded;
+        // Không thể sprint khi đang sneak
+        bool isSprinting = wantsToSprint && isMoving && canSprint && isGrounded && !isSneaking;
         
         if (isSprinting && staminaSystem != null)
         {
@@ -86,7 +93,14 @@ public class FirstPersonController : MonoBehaviour
             staminaSystem.StopDraining();
         }
         
-        float currentSpeed = isSprinting ? runSpeed : walkSpeed;
+
+        // Chọn tốc độ dựa trên trạng thái
+        float currentSpeed = walkSpeed;
+        if (isSneaking)
+            currentSpeed = sneakSpeed;
+        else if (isSprinting)
+            currentSpeed = runSpeed;
+        
         controller.Move(move * currentSpeed * Time.deltaTime);
 
         if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)

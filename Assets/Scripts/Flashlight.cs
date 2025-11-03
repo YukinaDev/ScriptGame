@@ -16,6 +16,10 @@ public class Flashlight : MonoBehaviour
     public float currentBattery = 100f;
     public float batteryDrainRate = 5f;
     
+    [Header("Recharge Settings")]
+    [Tooltip("Chỉ sạc pin bằng Battery Items, không tự động sạc")]
+    public bool manualRechargeOnly = true;
+    
     [Header("Flicker Effect (Optional)")]
     public bool enableFlicker = false;
     public float flickerIntensity = 0.2f;
@@ -75,16 +79,20 @@ public class Flashlight : MonoBehaviour
 
     void HandleBattery()
     {
-        if (!useBattery || !isOn) return;
+        if (!useBattery) return;
 
-        currentBattery -= batteryDrainRate * Time.deltaTime;
-        currentBattery = Mathf.Max(0f, currentBattery);
-
-        if (currentBattery <= 0f)
+        if (isOn)
         {
-            isOn = false;
-            if (flashlight != null)
-                flashlight.enabled = false;
+            // Drain battery khi đèn bật
+            currentBattery -= batteryDrainRate * Time.deltaTime;
+            currentBattery = Mathf.Max(currentBattery, 0f);
+
+            if (currentBattery <= 0f)
+            {
+                isOn = false;
+                if (flashlight != null)
+                    flashlight.enabled = false;
+            }
         }
     }
 
@@ -106,5 +114,30 @@ public class Flashlight : MonoBehaviour
     public float GetBatteryPercentage()
     {
         return currentBattery / maxBattery;
+    }
+
+    // Public methods để sạc pin từ items hoặc script khác
+    public void RechargeBattery(float amount)
+    {
+        if (!useBattery) return;
+        
+        currentBattery = Mathf.Min(currentBattery + amount, maxBattery);
+        Debug.Log($"Battery recharged: {currentBattery}/{maxBattery}");
+    }
+
+    public void SetBatteryToFull()
+    {
+        currentBattery = maxBattery;
+        Debug.Log("Battery fully charged!");
+    }
+
+    public bool IsBatteryLow()
+    {
+        return currentBattery < maxBattery * 0.2f; // < 20%
+    }
+
+    public bool IsBatteryDead()
+    {
+        return currentBattery <= 0f;
     }
 }
