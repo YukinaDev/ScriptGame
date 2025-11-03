@@ -7,7 +7,7 @@ public class HidingSpot : MonoBehaviour, IInteractable
     public Transform hidePosition;
     [Tooltip("(Optional) Empty GameObject để chỉ định hướng camera nhìn. Bỏ trống = dùng rotation của HidePosition")]
     public Transform hideViewDirection;
-    
+
     [Header("Player Settings")]
     [Tooltip("Ẩn hoàn toàn player model")]
     public bool hidePlayerModel = true;
@@ -35,12 +35,14 @@ public class HidingSpot : MonoBehaviour, IInteractable
     private bool isOccupied = false;
     private GameObject hiddenPlayer;
     private FirstPersonController playerController;
+    private InteractionSystem interactionSystem;
     private Vector3 originalPlayerPosition;
     private Quaternion originalPlayerRotation;
     private Camera playerCamera;
     private Quaternion originalCameraRotation;
     private GameObject playerModel;
     private GameObject hidingOverlayUI;
+    private Collider cabinetCollider;
 
     void Start()
     {
@@ -57,6 +59,9 @@ public class HidingSpot : MonoBehaviour, IInteractable
         {
             audioSource = GetComponent<AudioSource>();
         }
+
+        // Lấy collider của tủ
+        cabinetCollider = GetComponent<Collider>();
     }
 
     void Update()
@@ -64,12 +69,8 @@ public class HidingSpot : MonoBehaviour, IInteractable
         // Check input để exit khi đang trốn
         if (isOccupied && hiddenPlayer != null)
         {
-            // Hiện prompt liên tục
-            if (InteractionPrompt.Instance != null)
-            {
-                InteractionPrompt.Instance.ShowPrompt(exitMessage);
-            }
-
+            // Không cần ShowPrompt vì overlay UI đã có text rồi
+            
             // Check E key để exit
             if (UnityEngine.InputSystem.Keyboard.current != null && 
                 UnityEngine.InputSystem.Keyboard.current.eKey.wasPressedThisFrame)
@@ -83,8 +84,8 @@ public class HidingSpot : MonoBehaviour, IInteractable
     {
         if (isOccupied && hiddenPlayer != null)
         {
-            // Đang trốn trong tủ này
-            return exitMessage;
+            // Đang trốn trong tủ này - không hiện prompt (overlay UI đã có)
+            return "";
         }
         else if (isOccupied)
         {
@@ -122,6 +123,7 @@ public class HidingSpot : MonoBehaviour, IInteractable
 
         // Get components
         playerController = player.GetComponent<FirstPersonController>();
+        interactionSystem = player.GetComponent<InteractionSystem>();
         playerCamera = player.GetComponentInChildren<Camera>();
         
         if (playerCamera != null)
@@ -129,10 +131,16 @@ public class HidingSpot : MonoBehaviour, IInteractable
             originalCameraRotation = playerCamera.transform.rotation;
         }
 
-        // Disable movement
+        // Disable movement and interaction
         if (playerController != null)
         {
             playerController.enabled = false;
+        }
+
+        // Disable interaction để không raycast hit tủ khác
+        if (interactionSystem != null)
+        {
+            interactionSystem.enabled = false;
         }
 
         // Di chuyển player vào vị trí trốn
@@ -175,19 +183,30 @@ public class HidingSpot : MonoBehaviour, IInteractable
             audioSource.PlayOneShot(enterSound);
         }
 
-        // Hiện message
+        // Ẩn interaction prompt
+        if (InteractionPrompt.Instance != null)
+        {
+            InteractionPrompt.Instance.HidePrompt();
+        }
+        
+        // Force ẩn MessageDisplay nếu có
         if (MessageDisplay.Instance != null)
         {
-            MessageDisplay.Instance.ShowMessage($"Hiding in {hidingSpotName}... Press E to exit");
+            MessageDisplay.Instance.Hide();
         }
 
-        // Tạo hiding overlay UI
+        // Disable collider để raycast không hit tủ này từ trong
+        if (cabinetCollider != null)
+        {
+            cabinetCollider.enabled = false;
+        }
+
+        // Tạo hiding overlay UI (đã có text exit ở đây rồi)
         if (showHidingOverlay)
         {
             CreateHidingOverlay();
         }
 
-        Debug.Log($"[HidingSpot] Player entered hiding in {hidingSpotName}");
     }
 
     void ExitHiding()
@@ -196,10 +215,16 @@ public class HidingSpot : MonoBehaviour, IInteractable
 
         GameObject player = hiddenPlayer;
 
-        // Enable movement
+        // Enable movement and interaction
         if (playerController != null)
         {
             playerController.enabled = true;
+        }
+
+        // Enable lại interaction system
+        if (interactionSystem != null)
+        {
+            interactionSystem.enabled = true;
         }
 
         // Di chuyển player ra khỏi hiding spot
@@ -254,12 +279,17 @@ public class HidingSpot : MonoBehaviour, IInteractable
             hidingOverlayUI = null;
         }
 
-        Debug.Log($"[HidingSpot] Player exited hiding from {hidingSpotName}");
+        // Enable lại collider
+        if (cabinetCollider != null)
+        {
+            cabinetCollider.enabled = true;
+        }
 
         // Reset state
         hiddenPlayer = null;
         isOccupied = false;
         playerController = null;
+        interactionSystem = null;
         playerCamera = null;
     }
 
