@@ -144,10 +144,23 @@ public class DoorInteraction : MonoBehaviour, IInteractable
         {
             GameManager.Instance.playerData.UnlockDoor(doorID);
         }
+        
+        // Register với GameDataManager
+        UniqueID uid = GetComponent<UniqueID>();
+        if (uid != null && GameDataManager.Instance != null)
+        {
+            GameDataManager.Instance.RegisterDoorOpened(uid.ID);
+        }
     }
 
     IEnumerator LoadSceneWithAnimation()
     {
+        // Save data TRƯỚC KHI load scene
+        if (GameDataManager.Instance != null)
+        {
+            GameDataManager.Instance.SaveCurrentSceneData();
+        }
+        
         if (loadingPanel != null)
             loadingPanel.SetActive(true);
 

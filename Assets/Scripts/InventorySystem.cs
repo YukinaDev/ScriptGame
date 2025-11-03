@@ -80,6 +80,7 @@ public class InventorySystem : MonoBehaviour
             {
                 inventory[i] = item;
                 item.SetActive(false);
+                
                 SelectSlot(i);
                 UpdateInventoryUI();  // Cập nhật UI
                 return true;
@@ -208,7 +209,7 @@ public class InventorySystem : MonoBehaviour
         return true;
     }
 
-    void UpdateInventoryUI()
+    public void UpdateInventoryUI()
     {
         if (uiManager == null)
         {

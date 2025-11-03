@@ -123,6 +123,13 @@ public class FlashlightItem : MonoBehaviour, IInteractable
                 }
                 return; // Không destroy nếu inventory đầy
             }
+            
+            // Register với GameDataManager
+            UniqueID uid = GetComponent<UniqueID>();
+            if (uid != null && GameDataManager.Instance != null)
+            {
+                GameDataManager.Instance.RegisterItemPickup(uid.ID);
+            }
         }
         
         // Hiện message

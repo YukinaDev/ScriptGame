@@ -175,11 +175,11 @@ public class UIManager : MonoBehaviour
                 batteryBarFill.fillAmount = batteryPercent;
             }
             
-            // Debug để check giá trị
-            if (Time.frameCount % 60 == 0)
-            {
-                Debug.Log($"[UIManager] Battery: {flashlight.currentBattery}/{flashlight.maxBattery} = {batteryPercent:F2}");
-            }
+            // Debug để check giá trị (comment để giảm spam)
+            // if (Time.frameCount % 60 == 0)
+            // {
+            //     Debug.Log($"[UIManager] Battery: {flashlight.currentBattery}/{flashlight.maxBattery} = {batteryPercent:F2}");
+            // }
             
             // Đổi màu dựa vào % pin
             if (batteryPercent > 0.5f)

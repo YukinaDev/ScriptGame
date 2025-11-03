@@ -60,19 +60,19 @@ public class InteractionSystem : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit, interactionDistance, interactableLayer))
         {
-            Debug.Log($"[InteractionSystem] Raycast HIT: {hit.collider.gameObject.name} on layer {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
+            // Debug.Log($"[InteractionSystem] Raycast HIT: {hit.collider.gameObject.name} on layer {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
             
             IInteractable interactable = hit.collider.GetComponent<IInteractable>();
             
             if (interactable != null)
             {
-                Debug.Log($"[InteractionSystem] IInteractable found: {interactable.GetType().Name}");
+                // Debug.Log($"[InteractionSystem] IInteractable found: {interactable.GetType().Name}");
                 SetCurrentInteractable(interactable);
                 return;
             }
             else
             {
-                Debug.LogWarning($"[InteractionSystem] Object hit but NO IInteractable component!");
+                // Debug.LogWarning($"[InteractionSystem] Object hit but NO IInteractable component!");
             }
         }
 

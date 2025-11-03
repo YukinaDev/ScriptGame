@@ -71,6 +71,13 @@ public class PickupItem : MonoBehaviour, IInteractable
         {
             Debug.Log($"Picked up: {itemName}");
             
+            // Register với GameDataManager
+            UniqueID uid = GetComponent<UniqueID>();
+            if (uid != null && GameDataManager.Instance != null)
+            {
+                GameDataManager.Instance.RegisterItemPickup(uid.ID);
+            }
+            
             // Hiện message
             if (MessageDisplay.Instance != null)
             {
