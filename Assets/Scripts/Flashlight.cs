@@ -7,6 +7,10 @@ public class Flashlight : MonoBehaviour
     public Light flashlight;
     public bool isOn = true;
     
+    [Header("Pickup Settings")]
+    [Tooltip("Player có đèn pin từ đầu? Nếu false, phải nhặt FlashlightItem mới dùng được")]
+    public bool startWithFlashlight = true;
+    
     [Header("Toggle Key")]
     public KeyCode toggleKey = KeyCode.F;
     
@@ -38,10 +42,33 @@ public class Flashlight : MonoBehaviour
         if (flashlight != null)
         {
             originalIntensity = flashlight.intensity;
+            
+            // Nếu không có đèn pin từ đầu → disable
+            if (!startWithFlashlight)
+            {
+                flashlight.enabled = false;
+                this.enabled = false; // Disable script
+                return;
+            }
+            
             flashlight.enabled = isOn;
         }
 
         currentBattery = maxBattery;
+    }
+    
+    // Được gọi khi nhặt FlashlightItem
+    public void EnableFlashlight()
+    {
+        startWithFlashlight = true;
+        this.enabled = true;
+        
+        if (flashlight != null)
+        {
+            flashlight.enabled = isOn;
+        }
+        
+        Debug.Log("Flashlight enabled!");
     }
 
     void Update()

@@ -59,14 +59,14 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        // Ẩn battery panel nếu không dùng pin
+        // Ẩn battery panel nếu không dùng pin HOẶC chưa nhặt flashlight
         if (batteryBarPanel != null)
         {
             if (flashlight != null)
             {
-                bool shouldShow = flashlight.useBattery;
+                bool shouldShow = flashlight.useBattery && flashlight.startWithFlashlight;
                 batteryBarPanel.SetActive(shouldShow);
-                Debug.Log($"[UIManager] BatteryPanel: {(shouldShow ? "ACTIVE" : "HIDDEN")} (useBattery={flashlight.useBattery})");
+                Debug.Log($"[UIManager] BatteryPanel: {(shouldShow ? "ACTIVE" : "HIDDEN")} (useBattery={flashlight.useBattery}, hasFlashlight={flashlight.startWithFlashlight})");
             }
             else
             {
@@ -256,6 +256,14 @@ public class UIManager : MonoBehaviour
                     slotBackground.color = new Color(1f, 1f, 1f, 0.3f);
                 }
             }
+        }
+    }
+    
+    public void ShowBatteryBar()
+    {
+        if (batteryBarPanel != null && flashlight != null && flashlight.useBattery)
+        {
+            batteryBarPanel.SetActive(true);
         }
     }
 }

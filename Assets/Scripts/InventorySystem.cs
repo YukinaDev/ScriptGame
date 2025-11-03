@@ -222,12 +222,28 @@ public class InventorySystem : MonoBehaviour
         {
             if (i < inventory.Length && inventory[i] != null)
             {
-                // Lấy sprite từ PickupItem component
+                Sprite icon = null;
+                string itemName = inventory[i].name;
+                
+                // Lấy sprite từ PickupItem
                 PickupItem pickupItem = inventory[i].GetComponent<PickupItem>();
                 if (pickupItem != null && pickupItem.itemIcon != null)
                 {
-                    Debug.Log($"[InventorySystem] Slot {i}: Showing icon for '{pickupItem.itemName}'");
-                    uiManager.UpdateInventorySlot(i, pickupItem.itemIcon);
+                    icon = pickupItem.itemIcon;
+                    itemName = pickupItem.itemName;
+                }
+                
+                // Lấy sprite từ FlashlightItem
+                FlashlightItem flashlightItem = inventory[i].GetComponent<FlashlightItem>();
+                if (flashlightItem != null && flashlightItem.itemIcon != null)
+                {
+                    icon = flashlightItem.itemIcon;
+                    itemName = flashlightItem.itemName;
+                }
+                if (icon != null)
+                {
+                    Debug.Log($"[InventorySystem] Slot {i}: Showing icon for '{itemName}'");
+                    uiManager.UpdateInventorySlot(i, icon);
                 }
                 else
                 {
