@@ -37,7 +37,7 @@ public class DoorPhysics : MonoBehaviour
         }
     }
     
-    void UpdatePhysics()
+    public void UpdatePhysics()
     {
         if (doorInteraction != null && physicalBlockCollider != null)
         {

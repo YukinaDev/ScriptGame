@@ -20,6 +20,13 @@ public class FirstPersonController : MonoBehaviour
     public Transform groundCheck;
     public float groundDistance = 0.4f;
     public LayerMask groundMask;
+    
+    [Header("Sound Detection")]
+    public float walkSoundIntensity = 8f;
+    public float runSoundIntensity = 15f;
+    public float sneakSoundIntensity = 3f;
+    public float soundEmitInterval = 0.5f;
+    private float soundTimer = 0f;
 
     private CharacterController controller;
     private StaminaSystem staminaSystem;
@@ -48,6 +55,7 @@ public class FirstPersonController : MonoBehaviour
         HandleMovement();
         HandleMouseLook();
         HandleGravity();
+        HandleSoundEmission();
     }
 
     void HandleMovement()
@@ -134,6 +142,40 @@ public class FirstPersonController : MonoBehaviour
     public bool IsMoving()
     {
         return controller.velocity.magnitude > 0.1f;
+    }
+    
+    void HandleSoundEmission()
+    {
+        if (!isGrounded || !IsMoving()) 
+        {
+            soundTimer = 0f;
+            return;
+        }
+        
+        soundTimer += Time.deltaTime;
+        
+        if (soundTimer >= soundEmitInterval)
+        {
+            soundTimer = 0f;
+            
+            // Determine sound intensity based on movement type
+            float intensity = walkSoundIntensity;
+            
+            if (isSneaking)
+            {
+                intensity = sneakSoundIntensity;
+            }
+            else if (Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed)
+            {
+                intensity = runSoundIntensity;
+            }
+            
+            // Emit sound to SoundManager
+            if (SoundManager.Instance != null)
+            {
+                SoundManager.Instance.EmitSound(transform.position, intensity, "Footstep");
+            }
+        }
     }
 
     void OnDrawGizmosSelected()

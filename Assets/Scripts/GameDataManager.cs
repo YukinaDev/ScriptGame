@@ -24,6 +24,7 @@ public class GameData
     // World state
     public List<string> pickedUpItemIDs = new List<string>();
     public List<string> openedDoorIDs = new List<string>();
+    public List<string> unlockedPuzzleIDs = new List<string>(); // Puzzle đã unlock
     
     // Scene tracking
     public string lastSceneName = "";
@@ -125,7 +126,7 @@ public class GameDataManager : MonoBehaviour
         SaveInventory();
         
         if (showDebugLogs)
-            Debug.Log($"[GameDataManager] Data saved! Battery={currentData.currentBattery}, Stamina={currentData.currentStamina}, Items={currentData.inventoryItems.Count}, PickedUp={currentData.pickedUpItemIDs.Count}, Doors={currentData.openedDoorIDs.Count}");
+            Debug.Log($"[GameDataManager] Data saved! Battery={currentData.currentBattery}, Stamina={currentData.currentStamina}, Items={currentData.inventoryItems.Count}, PickedUp={currentData.pickedUpItemIDs.Count}, Doors={currentData.openedDoorIDs.Count}, Puzzles={currentData.unlockedPuzzleIDs.Count}");
     }
 
     void SavePlayerStats()
@@ -240,6 +241,9 @@ public class GameDataManager : MonoBehaviour
         
         // Restore door states
         RestoreDoorStates();
+        
+        // Restore puzzle states
+        RestorePuzzleStates();
         
         if (showDebugLogs)
             Debug.Log("[GameDataManager] Data loaded!");
@@ -379,6 +383,50 @@ public class GameDataManager : MonoBehaviour
         if (showDebugLogs)
             Debug.Log($"[GameDataManager] Restored {restoredCount} door states");
     }
+    
+    void RestorePuzzleStates()
+    {
+        if (currentData.unlockedPuzzleIDs.Count == 0) return;
+        
+        // Tìm tất cả puzzles có UniqueID
+        PuzzleObject[] allPuzzles = FindObjectsOfType<PuzzleObject>();
+        int restoredCount = 0;
+        
+        foreach (PuzzleObject puzzle in allPuzzles)
+        {
+            UniqueID uid = puzzle.GetComponent<UniqueID>();
+            if (uid != null && currentData.unlockedPuzzleIDs.Contains(uid.ID))
+            {
+                // Unlock puzzle
+                puzzle.isLocked = false;
+                
+                if (showDebugLogs)
+                    Debug.Log($"[GameDataManager] Restored puzzle state: {puzzle.gameObject.name} → Unlocked");
+                
+                restoredCount++;
+            }
+        }
+        
+        // Tìm MultiItemPuzzle
+        MultiItemPuzzle[] multiPuzzles = FindObjectsOfType<MultiItemPuzzle>();
+        foreach (MultiItemPuzzle puzzle in multiPuzzles)
+        {
+            UniqueID uid = puzzle.GetComponent<UniqueID>();
+            if (uid != null && currentData.unlockedPuzzleIDs.Contains(uid.ID))
+            {
+                // Unlock puzzle
+                puzzle.isLocked = false;
+                
+                if (showDebugLogs)
+                    Debug.Log($"[GameDataManager] Restored multi-item puzzle: {puzzle.gameObject.name} → Unlocked");
+                
+                restoredCount++;
+            }
+        }
+        
+        if (showDebugLogs)
+            Debug.Log($"[GameDataManager] Restored {restoredCount} puzzle states");
+    }
 
     // ==================== PUBLIC API ====================
     
@@ -403,6 +451,17 @@ public class GameDataManager : MonoBehaviour
                 Debug.Log($"[GameDataManager] Registered door opened: {doorID}");
         }
     }
+    
+    public void RegisterPuzzleUnlock(string puzzleID)
+    {
+        if (!currentData.unlockedPuzzleIDs.Contains(puzzleID))
+        {
+            currentData.unlockedPuzzleIDs.Add(puzzleID);
+            
+            if (showDebugLogs)
+                Debug.Log($"[GameDataManager] Registered puzzle unlocked: {puzzleID}");
+        }
+    }
 
     public bool IsItemPickedUp(string itemID)
     {
@@ -412,6 +471,11 @@ public class GameDataManager : MonoBehaviour
     public bool IsDoorOpened(string doorID)
     {
         return currentData.openedDoorIDs.Contains(doorID);
+    }
+    
+    public bool IsPuzzleUnlocked(string puzzleID)
+    {
+        return currentData.unlockedPuzzleIDs.Contains(puzzleID);
     }
 
     public void ResetGameData()

@@ -43,6 +43,7 @@ public class HidingSpot : MonoBehaviour, IInteractable
     private GameObject playerModel;
     private GameObject hidingOverlayUI;
     private Collider cabinetCollider;
+    private int originalPlayerLayer;
 
     void Start()
     {
@@ -176,6 +177,11 @@ public class HidingSpot : MonoBehaviour, IInteractable
                 }
             }
         }
+        
+        // ĐỔI LAYER ĐỂ ENEMY KHÔNG NHÌN THẤY
+        originalPlayerLayer = player.layer;
+        player.layer = LayerMask.NameToLayer("Ignore Raycast");
+        Debug.Log("[HidingSpot] Player hidden, changed to Ignore Raycast layer");
 
         // Phát âm thanh
         if (enterSound != null && audioSource != null)
@@ -259,6 +265,10 @@ public class HidingSpot : MonoBehaviour, IInteractable
                 r.enabled = true;
             }
         }
+        
+        // RESTORE LAYER
+        player.layer = originalPlayerLayer;
+        Debug.Log("[HidingSpot] Player visible again, restored layer");
 
         // Phát âm thanh
         if (exitSound != null && audioSource != null)
