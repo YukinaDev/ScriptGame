@@ -42,7 +42,9 @@ public class EnemyAI : MonoBehaviour
     
     [Header("Game Over")]
     public float killDistance = 1.5f;
-    public GameObject gameOverUI;
+    public GameObject gameOverPanel;
+    [Tooltip("Nếu false, enemy sẽ không tự động trigger game over khi chạm player")]
+    public bool enableAutoGameOver = true;
     
     [Header("Optional Components")]
     public Animator animator; // Để trống, sẽ tự tìm
@@ -101,10 +103,17 @@ public class EnemyAI : MonoBehaviour
         // Update animator
         UpdateAnimator();
         
-        // Check kill distance
-        if (target != null)
+        // Check kill distance (chỉ khi bật enableAutoGameOver)
+        if (enableAutoGameOver && target != null)
         {
             float distanceToTarget = Vector3.Distance(transform.position, target.position);
+            
+            // Debug log mỗi giây
+            if (Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"[EnemyAI] Distance to player: {distanceToTarget:F2}m (killDistance: {killDistance}m)");
+            }
+            
             if (distanceToTarget <= killDistance)
             {
                 TriggerGameOver();
@@ -297,10 +306,14 @@ public class EnemyAI : MonoBehaviour
     {
         Debug.Log($"[EnemyAI] Player caught by {gameObject.name}! GAME OVER");
         
-        // Show game over UI
-        if (gameOverUI != null)
+        // Show game over panel
+        if (gameOverPanel != null)
         {
-            gameOverUI.SetActive(true);
+            gameOverPanel.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning("[EnemyAI] GameOverPanel is not assigned!");
         }
         
         // Freeze player
@@ -313,7 +326,7 @@ public class EnemyAI : MonoBehaviour
                 fpc.enabled = false;
             }
             
-            // Lock cursor
+            // Unlock cursor để click button
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
@@ -322,16 +335,8 @@ public class EnemyAI : MonoBehaviour
         agent.isStopped = true;
         enabled = false;
         
-        // Quay về MainMenu sau 3 giây
-        StartCoroutine(ReturnToMainMenu());
-    }
-    
-    System.Collections.IEnumerator ReturnToMainMenu()
-    {
-        yield return new UnityEngine.WaitForSeconds(3f);
-        
-        Debug.Log("[EnemyAI] Returning to MainMenu...");
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+        // Pause game
+        Time.timeScale = 0f;
     }
     
     void OnDrawGizmos()
